@@ -1,0 +1,9 @@
+import { fetchFromStrava } from "./strava.js";
+import { writeToSpreadsheet } from "./spreadsheet.js";
+
+const main = async () => {
+  const data = await fetchFromStrava();
+  await writeToSpreadsheet(data);
+};
+
+main();
