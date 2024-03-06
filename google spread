@@ -1,0 +1,35 @@
+import { google } from "googleapis";
+import path from "path";
+
+const CREDENTIAL_DIR = path.join(
+  process.cwd(),
+  "credentials",
+  "credentials_google.json"
+);
+
+export const writeToSpreadsheet = async (data) => {
+  // get auth.
+  const auth = new google.auth.GoogleAuth({
+    keyFile: CREDENTIAL_DIR,
+    scopes: ["https://www.googleapis.com/auth/spreadsheets"],
+  });
+
+  const googleSheets = google.sheets({ version: "v4", auth });
+  const spreadsheetId = "1Cq6k-p7VTV3q7urfNGe4ndXZXX4zpRejnXs2js4yJXY";
+  const range = "raw";
+  const valueInputOption = "USER_ENTERED";
+
+  const headers = Object.keys(data[0]);
+
+  const values = data.map(item => headers.map(header => item[header]))
+
+  // write to spreadsheet.
+  await googleSheets.spreadsheets.values.update({
+    spreadsheetId,
+    range,
+    valueInputOption,
+    requestBody: {
+      values: [],
+    },
+  });
+};
