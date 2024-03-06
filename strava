@@ -1,0 +1,68 @@
+import axios from "axios";
+import fs from "fs";
+import path from "path";
+
+const CREDENTIAL_DIR = path.join(
+  process.cwd(),
+  "credentials",
+  "credentials_strava.json"
+);
+
+export const fetchFromStrava = async () => {
+  // read strava credential
+  const credentials = JSON.parse(
+    fs.readFileSync(CREDENTIAL_DIR, {
+      encoding: "utf-8",
+    })
+  );
+
+  // fetch token
+  let accessToken = null;
+  const authResponse = await axios.post(
+    "https://www.strava.com/api/v3/oauth/token",
+    {
+      client_id: credentials.client_id,
+      client_secret: credentials.client_secret,
+      refresh_token: credentials.refresh_token,
+      grant_type: "refresh_token",
+    }
+  );
+
+  accessToken = authResponse.data.access_token;
+
+  if (!accessToken) throw new Error("failed to fetch access token.");
+
+  // update credentials-strava.json
+  fs.writeFileSync(
+    CREDENTIAL_DIR,
+    JSON.stringify({ ...credentials, ...authResponse.data }),
+    {
+      encoding: "utf-8",
+    }
+  );
+
+  const clubsResponse = await axios.get(
+    "https://www.strava.com/api/v3/athlete/clubs",
+    {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    }
+  );
+
+  const kniaCalClubId = clubsResponse.data.find(
+    (club) => club.name === "KNIA Cal"
+  )?.id;
+
+  if (!kniaCalClubId) throw new Error("failed to get knia cal club id.");
+
+  const clubActivitiesResponse = await axios.get(
+    `https://www.strava.com/api/v3/clubs/${kniaCalClubId}/activities`,
+    {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    }
+  );
+
+  return clubActivitiesResponse.data.map((item) => ({
+    name: `${item.athlete.firstname}${item.athlete.lastname}`,
+    distance: item.distance,
+  }));
+};
